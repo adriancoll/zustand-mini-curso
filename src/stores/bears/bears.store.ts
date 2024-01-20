@@ -1,4 +1,6 @@
-import { create } from 'zustand'
+import { StateCreator, create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import { firebaseStorage } from '../storage/firebase.storage'
 
 type IncreaseFunction = (by: number) => void
 
@@ -11,13 +13,10 @@ interface BearState {
   blackBears: number
   polarBears: number
   pandaBears: number
-
-  computed: {
-    totalBears: number
-  }
-
   bears: Bear[]
+}
 
+interface Actions {
   increaseBlackBears: IncreaseFunction
   increasePolarBears: IncreaseFunction
   increasePandaBears: IncreaseFunction
@@ -26,17 +25,17 @@ interface BearState {
 
   addBear: () => void
   clearBears: () => void
+
+  totalBears: () => number
 }
 
-export const useBearStore = create<BearState>()((set, get) => ({
+const storeApi: StateCreator<BearState & Actions> = (set, get) => ({
   blackBears: 0,
   polarBears: 0,
   pandaBears: 0,
 
-  computed: {
-    get totalBears() {
-      return get().blackBears + get().polarBears + get().pandaBears + get().bears.length
-    }
+  totalBears() {
+    return get().blackBears + get().polarBears + get().pandaBears + get().bears.length
   },
 
   bears: [{
@@ -61,4 +60,9 @@ export const useBearStore = create<BearState>()((set, get) => ({
   clearBears: () => set(() => ({
     bears: []
   }))
-}))
+})
+
+export const useBearStore = create<BearState & Actions>()(
+  persist(
+    storeApi, { name: 'bear-storage', storage: firebaseStorage }
+  ))
